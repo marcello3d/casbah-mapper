@@ -12,6 +12,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.reflect.BeanInfo
 
 import com.novus.casbah.Imports._
+import Imports.log
 import mongodb.mapper.Mapper
 import mongodb.mapper.annotations._
 
@@ -88,6 +89,13 @@ class MapperSpec extends Specification with PendingUntilFixed {
       val piggy = new Piggy
       piggy.giggity = "oy vey"
       Some(Mapper[Piggy].upsert(piggy)) must beSome[Piggy].which(_.id must notBeNull)
+    }
+  }
+
+  "a mapped collection" should {
+    "return objects of required class" in {
+      val coll = MongoConnection()("mapper_test").mapped[Piggy]
+      coll.findOne must beSome[Piggy]
     }
   }
 }
