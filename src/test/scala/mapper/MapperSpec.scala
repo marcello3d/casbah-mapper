@@ -9,6 +9,7 @@ import org.specs._
 import org.specs.specification.PendingUntilFixed
 
 import scala.collection.mutable.{Buffer, ArrayBuffer}
+import scala.collection.JavaConversions._
 import scala.reflect.BeanInfo
 
 import com.novus.casbah.Imports._
@@ -119,7 +120,7 @@ class MapperSpec extends Specification with PendingUntilFixed {
     }
 
     "convert object to MongoDBObject" in {
-      val dbo = Mapper[Widget].asMongoDBObject(widget)
+      val dbo: MongoDBObject = Mapper[Widget].asDBObject(widget)
       dbo must havePair("_id", "something")
     }
 
@@ -145,7 +146,7 @@ class MapperSpec extends Specification with PendingUntilFixed {
     }
 
     "exclude null non-@ID fields from output" in {
-      val dbo = Mapper[Piggy].asMongoDBObject(new Piggy("has a null field"))
+      val dbo: MongoDBObject = Mapper[Piggy].asDBObject(new Piggy("has a null field"))
       dbo must notHaveKey("this_field_is_always_null")
     }
 
