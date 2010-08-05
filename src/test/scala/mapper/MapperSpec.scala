@@ -27,7 +27,7 @@ class Widget(@ID var name: String, @Key var price: Int) {
 @MappedBy(classOf[Any])
 class Piggy {
   @ID(auto = true)
-  var id: String = _
+  var id: ObjectId = _
 
   @Key
   var giggity: String = _
@@ -48,7 +48,7 @@ class Piggy {
 @MappedBy(classOf[Any])
 class Chair {
   @ID(auto = true)
-  var id: String = _
+  var id: ObjectId = _
 
   @Key
   var optional_piggy: Option[Piggy] = None
