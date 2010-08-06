@@ -20,14 +20,12 @@ import mongodb.mapper.Mapper
 import mongodb.mapper.annotations._
 
 @BeanInfo
-@MappedBy(classOf[Any])
 class Widget(@ID var name: String, @Key var price: Int) {
   def this() = this(null, 0)
   override def toString() = "Widget(" + name + ", " + price + ")"
 }
 
 @BeanInfo
-@MappedBy(classOf[Any])
 class Piggy {
   @ID(auto = true)
   var id: ObjectId = _
@@ -51,7 +49,6 @@ class Piggy {
 }
 
 @BeanInfo
-@MappedBy(classOf[Any])
 class Chair {
   @ID(auto = true)
   var id: ObjectId = _
@@ -64,7 +61,6 @@ class Chair {
 }
 
 @BeanInfo
-@MappedBy(classOf[Any])
 class Badge {
   @ID
   var name: String = _
