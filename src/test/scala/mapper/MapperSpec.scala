@@ -10,7 +10,8 @@ import net.lag.configgy.Configgy
 import org.specs._
 import org.specs.specification.PendingUntilFixed
 
-import scala.collection.mutable.{Buffer, ArrayBuffer}
+import scala.collection.Map
+import scala.collection.mutable.{Buffer, ArrayBuffer, Map => MMap}
 import scala.collection.JavaConversions._
 import scala.reflect.BeanInfo
 
@@ -26,12 +27,9 @@ class Widget(@ID var name: String, @Key var price: Int) {
 }
 
 @BeanInfo
-class Piggy {
+class Piggy(@Key val giggity: String) {
   @ID(auto = true)
   var id: ObjectId = _
-
-  @Key
-  var giggity: String = _
 
   @Key
   var favorite_foods: List[String] = Nil
@@ -42,10 +40,13 @@ class Piggy {
   @Key
   var badges: Buffer[Badge] = ArrayBuffer()
 
-  def this(g: String) = {
-    this()
-    giggity = g
-  }
+/*
+  @Key
+  var political_views: Map[String, String] = MMap.empty[String, String]
+
+  @Key
+  var family: Map[String, Piggy] = MMap.empty[String, Piggy]
+*/
 }
 
 @BeanInfo
