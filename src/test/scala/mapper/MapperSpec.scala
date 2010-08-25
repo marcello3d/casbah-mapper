@@ -1,6 +1,5 @@
 
 package com.bumnetworks.casbah
-package mongodb
 package test
 
 import java.util.Date
@@ -10,17 +9,16 @@ import net.lag.configgy.Configgy
 import org.specs._
 import org.specs.specification.PendingUntilFixed
 
-import scala.collection.Map
-import scala.collection.mutable.{Buffer, ArrayBuffer, Map => MMap}
-import scala.collection.JavaConversions._
-import scala.reflect.BeanInfo
+import _root_.scala.collection.Map
+import _root_.scala.collection.mutable.{Buffer, ArrayBuffer, Map => MMap}
+import _root_.scala.collection.JavaConversions._
+import _root_.scala.reflect.BeanInfo
 
 import java.math.BigInteger
 
 import com.novus.casbah.Imports._
-import Imports.log
-import mongodb.mapper.Mapper
-import mongodb.mapper.annotations._
+import mapper.Mapper
+import mapper.annotations._
 
 @BeanInfo
 class Widget(@ID var name: String, @Key var price: Int) {
@@ -227,12 +225,5 @@ class MapperSpec extends Specification with PendingUntilFixed {
       _two.two must_== "two"
       _two.three must beNone
     } pendingUntilFixed
-  }
-
-  "a mapped collection" should {
-    val coll = MongoConnection()("mapper_test").mapped[Piggy]
-    "return objects of required class" in {
-      coll.findOne must beSome[Piggy]
-    }
   }
 }
