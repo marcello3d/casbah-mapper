@@ -1,5 +1,4 @@
 package com.bumnetworks.casbah
-package mongodb
 package mapper
 
 import Implicits._

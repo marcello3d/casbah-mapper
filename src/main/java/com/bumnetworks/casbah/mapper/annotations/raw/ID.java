@@ -1,4 +1,4 @@
-package com.bumnetworks.casbah.mongodb.mapper.annotations.raw;
+package com.bumnetworks.casbah.mapper.annotations.raw;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
