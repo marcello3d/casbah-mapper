@@ -52,6 +52,13 @@ class Piggy(@Key val giggity: String) {
 
   @Key
   var balance: Option[BigDecimal] = None
+
+  @Key
+  var freshness: Freshness.Value = Freshness.Fresh
+}
+
+object Freshness extends Enumeration("fresh", "stale") {
+  val Fresh, Stale = Value
 }
 
 @BeanInfo
@@ -102,6 +109,8 @@ object PiggyMapper extends Mapper[Piggy] {
   conn = MongoConnection()
   db = "mapper_test"
   coll = "piggies"
+
+  "freshness".enum(Freshness)
 }
 
 object WOOM_Mapper extends Mapper[WorldOutsideOfManhattan]
@@ -238,6 +247,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
       piggy.political_views = POLITICAL_VIEWS
       piggy.family = FAMILY
       piggy.balance = Some(BALANCE)
+      piggy.freshness = Freshness.Stale
       before.optional_piggy = Some(piggy)
 
       before.things = Set("foo", "bar", "baz", "quux", "foo", "baz")
@@ -257,6 +267,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
             piggy.balance must beSome[BigDecimal].which {
               b => b must_== BALANCE
             }
+	    piggy.freshness must_== Freshness.Stale
           }
         after.always_here must beSome[String]
         after.never_here must beNone
