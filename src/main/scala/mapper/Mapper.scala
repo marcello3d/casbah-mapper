@@ -17,7 +17,7 @@ import _root_.scala.math.{BigDecimal => ScalaBigDecimal}
 import java.math.{BigDecimal => JavaBigDecimal, RoundingMode, MathContext}
 
 import annotations.raw._
-import commons.util.Logging
+import com.novus.casbah.util.Logging
 import com.novus.casbah.Imports._
 
 object Mapper extends Logging {
