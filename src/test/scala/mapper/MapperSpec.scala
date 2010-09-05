@@ -53,6 +53,9 @@ class Piggy(@Key val giggity: String) {
   @Key
   var balance: Option[BigDecimal] = None
 
+  @Key("days_in_year")
+  var daysInYear: Option[BigDecimal] = None
+
   @Key
   var freshness: Freshness.Value = Freshness.Fresh
 }
@@ -248,6 +251,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
       val POLITICAL_VIEWS = Map("wikileaks" -> "is my favorite site", "democrats" -> "have ruined the economy")
       val FAMILY = Map("father" -> new Piggy("father"), "mother" -> new Piggy("mother"))
       val BALANCE = BigDecimal("0.12345678901234")
+      val DAYS_IN_YEAR = BigDecimal("365")
 
       val before = new Chair
 
@@ -257,6 +261,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
       piggy.political_views = POLITICAL_VIEWS
       piggy.family = FAMILY
       piggy.balance = Some(BALANCE)
+      piggy.daysInYear = Some(DAYS_IN_YEAR)
       piggy.freshness = Freshness.Stale
       before.optional_piggy = Some(piggy)
       before.things = Set("foo", "bar", "baz", "quux", "foo", "baz")
@@ -277,6 +282,9 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
             }
             piggy.balance must beSome[BigDecimal].which {
               b => b must_== BALANCE
+            }
+            piggy.daysInYear must beSome[BigDecimal].which {
+              b => b must_== DAYS_IN_YEAR
             }
 	    piggy.freshness must_== Freshness.Stale
           }
