@@ -1,4 +1,3 @@
-
 package com.bumnetworks.casbah
 package test
 
@@ -19,7 +18,7 @@ import java.math.BigInteger
 import com.novus.casbah.Imports._
 import mapper.Mapper
 import mapper.annotations._
-import commons.util.Logging
+import com.novus.casbah.util.Logging
 
 import org.apache.commons.lang.RandomStringUtils.{randomAscii => rs}
 import org.apache.commons.lang.math.RandomUtils.{nextInt => rn}
