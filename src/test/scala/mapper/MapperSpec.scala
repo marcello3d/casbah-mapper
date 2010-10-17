@@ -165,6 +165,34 @@ object NodeCounter {
   var n: Int = _
 }
 
+@Indexed(as = Array(
+  new Index(name = "name", order = -1),
+  new Index(name = "first", unique = true)
+))
+case class Person(@ID(auto = true) id: ObjectId,
+		  @Key @Indexed(as = Array(new Index(name = "name"),
+					   new Index(name = "first"))) first_name: String,
+		  @Key @Index(name = "name") last_name: String,
+		  @Key home: Address)
+
+@BeanInfo
+case class Address(@Key street: String,
+		   @Key street_2: String,
+		   @Key city: City)
+
+@BeanInfo
+case class City(@Key zip: Int,
+		@Key city: String,
+		@Key state: String)
+
+object PersonMapper extends Mapper[Person] {
+  db = "mapper_test"
+  coll = "people"
+}
+
+object AddressMapper extends Mapper[Address]
+object CityMapper extends Mapper[City]
+
 class MapperSpec extends Specification with PendingUntilFixed with Logging {
   private implicit def pimpTimes(n: Int) = new {
     def times[T](f: => T) = (1 to n).toList.map(_ => f.apply)

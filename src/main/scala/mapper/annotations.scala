@@ -9,4 +9,6 @@ package object annotations {
   type UseTypeHints = raw.UseTypeHints @getter
   type KeyStrategy  = raw.KeyStrategy  @getter
   type Ignore       = raw.Ignore       @getter
+  type Index        = raw.Index        @getter
+  type Indexed      = raw.Indexed      @getter
 }
