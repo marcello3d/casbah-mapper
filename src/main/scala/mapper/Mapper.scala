@@ -54,7 +54,6 @@ class RichPropertyDescriptor(val idx: Int, val pd: PropertyDescriptor, val paren
        }
      }) match {
       case "_id" if !id_? => throw new Exception("only @ID props can have key == \"_id\"")
-      case s if s.startsWith("_") && !id_? => throw new Exception("keys can't start with underscores")
       case s if s.contains(".") || s.contains("$") => throw new Exception("keys can't contain . or $")
       case p => p
     }
