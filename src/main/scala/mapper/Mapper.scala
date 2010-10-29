@@ -487,6 +487,7 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
         })
       }
       case None if prop.option_? => prop.write(p, None)
+      case _ if prop.option_? => prop.write(p, None)
       case _ =>
     }
 
