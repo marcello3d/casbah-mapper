@@ -491,10 +491,50 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
       case _ =>
     }
 
+  private def companion(c: Class[_]) = {
+    try {
+      Some(Class.forName("%s$".format(c.getName)))
+    }
+    catch { case _ => None }
+  }
+
   def empty: P = try {
     obj_klass.newInstance
   } catch {
-    case _ => newInstance[P](obj_klass)(manifest[P])
+    case _ => {
+      companion(obj_klass) match {
+	case Some(comp) => {
+	  val singleton = comp.getField("MODULE$").get(null)
+	  val const = obj_klass.getConstructors.head // XXX: what if there are more?
+	  val defaults = comp.getMethods.toList.filter(_.getName.startsWith("init$default$"))
+	  val args = Range(0, const.getParameterTypes.size).toList.map {
+	    d => defaults.filter(_.getName == "init$default$%d".format(d + 1)).headOption match {
+	      case Some(default) => default.invoke(singleton)
+	      case _ => {
+		const.getParameterTypes.toList.apply(d) match {
+		  case t if t.isAssignableFrom(classOf[Double]) => Double.box(0)
+		  case t if t.isAssignableFrom(classOf[Float]) => Float.box(0)
+		  case t if t.isAssignableFrom(classOf[Long]) => Long.box(0)
+		  case t if t.isAssignableFrom(classOf[Int]) => Int.box(0)
+		  case t if t.isAssignableFrom(classOf[Short]) => Short.box(0)
+		  case t if t.isAssignableFrom(classOf[Byte]) => Byte.box(0)
+		  case t if t.isAssignableFrom(classOf[Option[_]]) => None
+		  case t if t.isAssignableFrom(classOf[Set[_]]) => Set.empty
+		  case t if t.isAssignableFrom(classOf[Map[_, _]]) => Map.empty
+		  case t if t.isAssignableFrom(classOf[Buffer[_]]) => Buffer.empty
+		  case t if t.isAssignableFrom(classOf[List[_]]) => List.empty
+		  case t if t.isAssignableFrom(classOf[Seq[_]]) => Seq.empty
+		  case t if t.isAssignableFrom(classOf[Boolean]) => Boolean.box(false)
+		  case _ => null
+		}
+	      }
+	    }
+	  }
+	  const.newInstance(args :_*).asInstanceOf[P]
+	}
+	case _ => newInstance[P](obj_klass)(manifest[P])
+      }
+    }
   }
 
   def asObject(dbo: MongoDBObject): P =
