@@ -98,15 +98,15 @@ class RichPropertyDescriptor(val idx: Int, val pd: PropertyDescriptor, val paren
   def write(dest: AnyRef, value: Any): Unit =
     field match {
       case Some(field) => {
-	// HACK HACK HACK: fire "read" method first, which should
-	// "prime" lazy vals. The issue being: lazy val's field can be
-	// set using Field.set(), but the wrapping method will still
-	// think it's supposed to fire even after that.
-	//try { read.invoke(dest) }
-	//catch { case _ => {} }
+        // HACK HACK HACK: fire "read" method first, which should
+        // "prime" lazy vals. The issue being: lazy val's field can be
+        // set using Field.set(), but the wrapping method will still
+        // think it's supposed to fire even after that.
+        //try { read.invoke(dest) }
+        //catch { case _ => {} }
 
-	// Now, go and set the field.
-	field.set(dest, squashNulls(value))
+        // Now, go and set the field.
+        field.set(dest, squashNulls(value))
       }
       case None => write match {
         case Some(write) => write.invoke(dest, squashNulls(value).asInstanceOf[AnyRef])
@@ -253,10 +253,10 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
     .sortWith { case (a, b) => a.getName.compareTo(b.getName) < 0 }
     .zipWithIndex.map {
       case (pd: PropertyDescriptor, idx: Int) => {
-	val pri = annotation[Key](pd, classOf[Key]) match {
-	  case Some(a) => a.pri
-	  case _ => -1
-	}
+        val pri = annotation[Key](pd, classOf[Key]) match {
+          case Some(a) => a.pri
+          case _ => -1
+        }
         new RichPropertyDescriptor(if (pri == -1) idx else pri, pd, obj_klass)
       }
     }
@@ -300,13 +300,13 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
 
     val dbo = {
       try {
-	prop.readMapper(embedded).asDBObject(embedded match {
-	  case Some(vv: AnyRef) if prop.option_? => vv
-	  case _ => embedded
-	})
+        prop.readMapper(embedded).asDBObject(embedded match {
+          case Some(vv: AnyRef) if prop.option_? => vv
+          case _ => embedded
+        })
       }
       catch {
-	case t: Throwable => throw new Exception("OOPS! %s ---> %s".format(this, prop), t)
+        case t: Throwable => throw new Exception("OOPS! %s ---> %s".format(this, prop), t)
       }
     }
 
@@ -336,7 +336,7 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
       }
       case _ if prop.enum_? => Some(prop.serializeEnum(p))
       case v: AnyRef if v.getClass.getName.contains("Enum") && !prop.enum_? =>
-	throw new Exception("achtung! %s in %s is not an enum, but should be one!".format(prop, obj_klass))
+        throw new Exception("achtung! %s in %s is not an enum, but should be one!".format(prop, obj_klass))
       case l: List[AnyRef] if prop.embedded_? => Some(l.map(embeddedPropValue(p, prop, _)))
       case b: Buffer[AnyRef] if prop.embedded_? => Some(b.map(embeddedPropValue(p, prop, _)))
       case s: Set[AnyRef] if prop.set_? && prop.embedded_? => Some(s.map(embeddedPropValue(p, prop, _)))
@@ -473,7 +473,7 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
                   v, v.asInstanceOf[AnyRef].getClass.getName, p, prop.key, prop.write, prop.field)
         prop.write(p, (v match {
           case oid: ObjectId => oid
-	  case e: String if prop.enum_? => prop.deserializeEnum(e)
+          case e: String if prop.enum_? => prop.deserializeEnum(e)
           case s: String if prop.id_? && idProp.map(_.autoId_?).getOrElse(false) => new ObjectId(s)
           case d: Double if prop.innerType == classOf[JavaBigDecimal] => new JavaBigDecimal(d, MATH_CONTEXT)
           case d: Double if prop.innerType == classOf[ScalaBigDecimal] => ScalaBigDecimal(d, MATH_CONTEXT)
@@ -491,7 +491,7 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
       case _ =>
     }
 
-  private def companion(c: Class[_]) = {
+  protected def companion(c: Class[_]) = {
     try {
       Some(Class.forName("%s$".format(c.getName)))
     }
@@ -501,55 +501,22 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
   def empty: P = try {
     obj_klass.newInstance
   } catch {
-    case _ => {
-      companion(obj_klass) match {
-	case Some(comp) => {
-	  val singleton = comp.getField("MODULE$").get(null)
-	  val const = obj_klass.getConstructors.head // XXX: what if there are more?
-	  val defaults = comp.getMethods.toList.filter(_.getName.startsWith("init$default$"))
-	  val args = Range(0, const.getParameterTypes.size).toList.map {
-	    d => defaults.filter(_.getName == "init$default$%d".format(d + 1)).headOption match {
-	      case Some(default) => default.invoke(singleton)
-	      case _ => {
-		const.getParameterTypes.toList.apply(d) match {
-		  case t if t.isAssignableFrom(classOf[Double]) => Double.box(0)
-		  case t if t.isAssignableFrom(classOf[Float]) => Float.box(0)
-		  case t if t.isAssignableFrom(classOf[Long]) => Long.box(0)
-		  case t if t.isAssignableFrom(classOf[Int]) => Int.box(0)
-		  case t if t.isAssignableFrom(classOf[Short]) => Short.box(0)
-		  case t if t.isAssignableFrom(classOf[Byte]) => Byte.box(0)
-		  case t if t.isAssignableFrom(classOf[Option[_]]) => None
-		  case t if t.isAssignableFrom(classOf[Set[_]]) => Set.empty
-		  case t if t.isAssignableFrom(classOf[Map[_, _]]) => Map.empty
-		  case t if t.isAssignableFrom(classOf[Buffer[_]]) => Buffer.empty
-		  case t if t.isAssignableFrom(classOf[List[_]]) => List.empty
-		  case t if t.isAssignableFrom(classOf[Seq[_]]) => Seq.empty
-		  case t if t.isAssignableFrom(classOf[Boolean]) => Boolean.box(false)
-		  case _ => null
-		}
-	      }
-	    }
-	  }
-	  const.newInstance(args :_*).asInstanceOf[P]
-	}
-	case _ => newInstance[P](obj_klass)(manifest[P])
-      }
-    }
+    case _ => newInstance[P](obj_klass)
   }
 
   def asObject(dbo: MongoDBObject): P =
     dbo.get(TYPE_HINT) match {
       case Some(hint: String) if hint != obj_klass.getName => {
-	Mapper(hint) match {
-	  case Some(hintedMapper) => hintedMapper.asObject(dbo).asInstanceOf[P]
-	  case _ => throw new MissingMapper(ReadMapper, Class.forName(hint), "while loading type-hinted DBO in %s".format(this))
-	}
+        Mapper(hint) match {
+          case Some(hintedMapper) => hintedMapper.asObject(dbo).asInstanceOf[P]
+          case _ => throw new MissingMapper(ReadMapper, Class.forName(hint), "while loading type-hinted DBO in %s".format(this))
+        }
       }
       case _ =>
-	allProps.filter(!_.ignoreIn_?).foldLeft(empty) {
-	  (p, prop) => write(p, prop, dbo.get(prop.key))
-	  p
-	}
+        allProps.filter(!_.ignoreIn_?).foldLeft(empty) {
+          (p, prop) => write(p, prop, dbo.get(prop.key))
+          p
+        }
     }
 
   def findOne(id: Any): Option[P] =
@@ -562,6 +529,49 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
     coll.insert(asDBObject(p))
     p // XXX: errors? dragons?
   }
+}
+
+trait DefaultArgsSetter[P <: AnyRef] {
+  self: Mapper[P] =>
+
+    override def empty: P = try {
+      obj_klass.newInstance
+    } catch {
+      case _ => {
+        companion(obj_klass) match {
+          case Some(comp) => {
+            val singleton = comp.getField("MODULE$").get(null)
+            val const = obj_klass.getConstructors.head // XXX: what if there are more?
+            val defaults = comp.getMethods.toList.filter(_.getName.startsWith("init$default$"))
+            val args = Range(0, const.getParameterTypes.size).toList.map {
+              d => defaults.filter(_.getName == "init$default$%d".format(d + 1)).headOption match {
+                case Some(default) => default.invoke(singleton)
+                case _ => {
+                  const.getParameterTypes.toList.apply(d) match {
+                    case t if t.isAssignableFrom(classOf[Double]) => Double.box(0)
+                    case t if t.isAssignableFrom(classOf[Float]) => Float.box(0)
+                    case t if t.isAssignableFrom(classOf[Long]) => Long.box(0)
+                    case t if t.isAssignableFrom(classOf[Int]) => Int.box(0)
+                    case t if t.isAssignableFrom(classOf[Short]) => Short.box(0)
+                    case t if t.isAssignableFrom(classOf[Byte]) => Byte.box(0)
+                    case t if t.isAssignableFrom(classOf[Option[_]]) => None
+                    case t if t.isAssignableFrom(classOf[Set[_]]) => Set.empty
+                    case t if t.isAssignableFrom(classOf[Map[_, _]]) => Map.empty
+                    case t if t.isAssignableFrom(classOf[Buffer[_]]) => Buffer.empty
+                    case t if t.isAssignableFrom(classOf[List[_]]) => List.empty
+                    case t if t.isAssignableFrom(classOf[Seq[_]]) => Seq.empty
+                    case t if t.isAssignableFrom(classOf[Boolean]) => Boolean.box(false)
+                    case _ => null
+                  }
+                }
+              }
+            }
+            const.newInstance(args :_*).asInstanceOf[P]
+          }
+          case _ => newInstance[P](obj_klass)
+        }
+      }
+    }
 }
 
 object MapperUtils {
@@ -599,8 +609,8 @@ trait OJ {
     if (classOf[java.io.Serializable].isAssignableFrom(clazz)) ser
     else std
 
-  def newInstance[T: Manifest](clazz: Class[T]): T =
-    manifest[T].erasure.cast(choose(clazz).newInstance(clazz)).asInstanceOf[T]
+  def newInstance[T](clazz: Class[T]): T =
+    clazz.cast(choose(clazz).newInstance(clazz)).asInstanceOf[T]
 }
 
 private[mapper] sealed trait MapperDirection
