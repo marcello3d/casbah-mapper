@@ -212,7 +212,7 @@ class RichPropertyDescriptor(val idx: Int, val pd: PropertyDescriptor, val paren
   override def hashCode(): Int = pd.hashCode()
 }
 
-abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
+abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ with CollectionOps[P] {
   import Mapper._
   import MapperUtils._
 
@@ -294,6 +294,27 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
       case List(prop) => Some(prop)
       case _ => None
     }
+
+  protected def companion(c: Class[_]) = {
+    try {
+      Some(Class.forName("%s$".format(c.getName)))
+    }
+    catch { case _ => None }
+  }
+
+  def empty: P = try {
+    obj_klass.newInstance
+  } catch {
+    case _ => newInstance[P](obj_klass)
+  }
+
+  def asObject(dbo: MongoDBObject): P
+  def asDBObject(p: P): DBObject
+}
+
+abstract class ReflectiveMapper[P <: AnyRef : Manifest]() extends Mapper[P] {
+  import Mapper._
+  import MapperUtils._
 
   private def embeddedPropValue(p: P, prop: RichPropertyDescriptor, embedded: AnyRef) = {
     log.trace("EMB: %s -> %s -> %s", p, prop, embedded)
@@ -491,19 +512,6 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
       case _ =>
     }
 
-  protected def companion(c: Class[_]) = {
-    try {
-      Some(Class.forName("%s$".format(c.getName)))
-    }
-    catch { case _ => None }
-  }
-
-  def empty: P = try {
-    obj_klass.newInstance
-  } catch {
-    case _ => newInstance[P](obj_klass)
-  }
-
   def asObject(dbo: MongoDBObject): P =
     dbo.get(TYPE_HINT) match {
       case Some(hint: String) if hint != obj_klass.getName => {
@@ -518,16 +526,20 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
           p
         }
     }
+}
 
-  def findOne(id: Any): Option[P] =
-    coll.findOne("_id" -> id) match {
-      case None => None
-      case Some(dbo) => Some(asObject(dbo))
+trait CollectionOps[P <: AnyRef] {
+  self: Mapper[P] => {
+    def findOne(id: Any): Option[P] =
+      coll.findOne("_id" -> id) match {
+        case None => None
+        case Some(dbo) => Some(asObject(dbo))
+      }
+
+    def upsert(p: P): P = {
+      coll.insert(asDBObject(p))
+      p // XXX: errors? dragons?
     }
-
-  def upsert(p: P): P = {
-    coll.insert(asDBObject(p))
-    p // XXX: errors? dragons?
   }
 }
 

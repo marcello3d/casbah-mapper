@@ -16,7 +16,7 @@ import _root_.scala.reflect.BeanInfo
 import java.math.BigInteger
 
 import com.novus.casbah.Imports._
-import mapper.Mapper
+import mapper._
 import mapper.annotations._
 import com.novus.casbah.util.Logging
 
@@ -98,19 +98,19 @@ case class OnABoat(@ID water: String) extends Badge {
   name = "I'm on a boat"
 }
 
-object ChairMapper extends Mapper[Chair] {
+object ChairMapper extends ReflectiveMapper[Chair] {
   conn = MongoConnection()
   db = "mapper_test"
   coll = "chairs"
 }
 
-object WidgetMapper extends Mapper[Widget] {
+object WidgetMapper extends ReflectiveMapper[Widget] {
   conn = MongoConnection()
   db = "mapper_test"
   coll = "widgets"
 }
 
-object PiggyMapper extends Mapper[Piggy] {
+object PiggyMapper extends ReflectiveMapper[Piggy] {
   conn = MongoConnection()
   db = "mapper_test"
   coll = "piggies"
@@ -118,8 +118,8 @@ object PiggyMapper extends Mapper[Piggy] {
   "freshness".enum(Freshness)
 }
 
-object WOOM_Mapper extends Mapper[WorldOutsideOfManhattan]
-object OAB_Mapper extends Mapper[OnABoat]
+object WOOM_Mapper extends ReflectiveMapper[WorldOutsideOfManhattan]
+object OAB_Mapper extends ReflectiveMapper[OnABoat]
 
 @BeanInfo
 case class One(@Key one: Option[String] = Some("one"))
@@ -129,8 +129,8 @@ case class Two(@Key two: String = "two") {
   @Key val three: Option[String] = None
 }
 
-object OneMapper extends Mapper[One]
-object TwoMapper extends Mapper[Two]
+object OneMapper extends ReflectiveMapper[One]
+object TwoMapper extends ReflectiveMapper[Two]
 
 @BeanInfo
 trait Node {
@@ -144,8 +144,8 @@ case class ListNode(@Key name: String, @Key @UseTypeHints children: List[Node] =
 @BeanInfo
 case class MapNode(@Key name: String, @Key @UseTypeHints children: Map[String, Node] = Map.empty[String, Node], @Key cheat: String = "map") extends Node
 
-object ListNodeMapper extends Mapper[ListNode]
-object MapNodeMapper extends Mapper[MapNode]
+object ListNodeMapper extends ReflectiveMapper[ListNode]
+object MapNodeMapper extends ReflectiveMapper[MapNode]
 
 object NodeMapper {
   def asDBObject(n: Node): DBObject =
@@ -185,13 +185,13 @@ case class City(@Key zip: Int,
 		@Key city: String,
 		@Key state: String)
 
-object PersonMapper extends Mapper[Person] {
+object PersonMapper extends ReflectiveMapper[Person] {
   db = "mapper_test"
   coll = "people"
 }
 
-object AddressMapper extends Mapper[Address]
-object CityMapper extends Mapper[City]
+object AddressMapper extends ReflectiveMapper[Address]
+object CityMapper extends ReflectiveMapper[City]
 
 class MapperSpec extends Specification with PendingUntilFixed with Logging {
   private implicit def pimpTimes(n: Int) = new {
