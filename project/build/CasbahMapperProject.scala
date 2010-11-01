@@ -13,7 +13,7 @@ class CasbahMapperProject(info: ProjectInfo) extends DefaultProject(info) {
   val publishTo = Resolver.sftp("repobum", "repobum", "/home/public/%s".format(
     if (projectVersion.value.toString.endsWith("-SNAPSHOT")) "snapshots"
     else "releases"
-  )) as("repobum_repobum", new java.io.File(Path.userHome + "/.ssh/id_rsa"))
+  )) as("repobum_repobum", new java.io.File(Path.userHome + "/.ssh/repobum"))
 
   val scalaToolsRepo = "Scala Tools Release Repository" at "http://scala-tools.org/repo-releases"
   val scalaToolsSnapRepo = "Scala Tools Snapshot Repository" at "http://scala-tools.org/repo-snapshots"
