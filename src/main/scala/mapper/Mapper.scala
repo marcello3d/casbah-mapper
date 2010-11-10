@@ -15,8 +15,8 @@ import _root_.scala.math.{BigDecimal => ScalaBigDecimal}
 import java.math.{BigDecimal => JavaBigDecimal, RoundingMode, MathContext}
 
 import annotations.raw._
-import com.novus.casbah.util.Logging
-import com.novus.casbah.Imports._
+import com.mongodb.casbah.commons.Logging
+import com.mongodb.casbah.Imports._
 
 object Mapper extends Logging {
   private val _m = new java.util.concurrent.ConcurrentHashMap[String, Mapper[_]]

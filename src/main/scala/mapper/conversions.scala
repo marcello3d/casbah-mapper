@@ -1,8 +1,8 @@
 package com.bumnetworks.casbah.mapper.conversions
 
-import com.novus.casbah.Imports._
+import com.mongodb.casbah.Imports._
 import com.bumnetworks.casbah.mapper.{Mapper, MapperUtils}
-import com.novus.casbah.conversions.MongoConversionHelper
+import com.mongodb.casbah.commons.conversions.MongoConversionHelper
 import org.bson.{BSON, Transformer}
 
 object RegisterMapperConversionHelpers extends MapperHelpers {

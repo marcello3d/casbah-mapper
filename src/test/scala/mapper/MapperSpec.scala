@@ -3,8 +3,6 @@ package test
 
 import java.util.Date
 
-import net.lag.configgy.Configgy
-
 import org.specs._
 import org.specs.specification.PendingUntilFixed
 
@@ -15,10 +13,10 @@ import _root_.scala.reflect.BeanInfo
 
 import java.math.BigInteger
 
-import com.novus.casbah.Imports._
+import com.mongodb.casbah.Imports._
 import mapper.Mapper
 import mapper.annotations._
-import com.novus.casbah.util.Logging
+import com.mongodb.casbah.commons.Logging
 
 import org.apache.commons.lang.RandomStringUtils.{randomAscii => rs}
 import org.apache.commons.lang.math.RandomUtils.{nextInt => rn}
@@ -195,14 +193,13 @@ object CityMapper extends Mapper[City]
 
 class MapperSpec extends Specification with PendingUntilFixed with Logging {
   private implicit def pimpTimes(n: Int) = new {
-    def times[T](f: => T) = (1 to n).toList.map(_ => f.apply)
+    def times[T](f: => T) = (1 to n).toList.map(_ => f)
   }
 
   detailedDiffs()
 
   doBeforeSpec {
-    Configgy.configure("src/test/resources/casbah.conf")
-    com.novus.casbah.conversions.scala.RegisterConversionHelpers()
+    com.mongodb.casbah.commons.conversions.scala.RegisterConversionHelpers()
     ChairMapper
     WidgetMapper
     PiggyMapper
@@ -368,7 +365,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
 
   private def measure(f: => Unit): Long = {
     val start = System.currentTimeMillis
-    f.apply
+    f
     val stop = System.currentTimeMillis
     stop - start
   }
