@@ -418,8 +418,8 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
       else if (prop.set_?) Set()
       else throw new Exception("whaaa! whaa! I'm lost! %s.%s".format(p, prop.name))
 
-    val dst = src.foldLeft(init) {
-      case (list, v) =>
+    val dst = src.foldRight(init) {
+      case (v, list) =>
         init ++ (list.toList ::: (if (prop.embedded_?) {
           val nested = v.asInstanceOf[DBObject]
           prop.writeMapper(nested).asObject(nested)
