@@ -1,5 +1,4 @@
-package com.bumnetworks.casbah
-package test
+package com.bumnetworks.casbah.test
 
 import java.util.Date
 
@@ -14,9 +13,11 @@ import _root_.scala.reflect.BeanInfo
 import java.math.BigInteger
 
 import com.mongodb.casbah.Imports._
-import mapper.Mapper
-import mapper.annotations._
+import com.mongodb.casbah.Implicits._
 import com.mongodb.casbah.commons.Logging
+
+import com.bumnetworks.casbah.mapper.Mapper
+import com.bumnetworks.casbah.mapper.annotations._
 
 import org.apache.commons.lang.RandomStringUtils.{randomAscii => rs}
 import org.apache.commons.lang.math.RandomUtils.{nextInt => rn}
@@ -216,7 +217,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
     shareVariables
 
     val widget = new Widget("something", 7824)
-    Mapper[Widget].upsert(widget)
+    Mapper[Widget].coll.insert(WidgetMapper(widget))
 
     "discover mapper for a class" in {
       Mapper[Piggy] must_== PiggyMapper
@@ -236,7 +237,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
     }
 
     "retrieve an object" in {
-      Mapper[Widget].findOne(widget.name) must beSome[Widget].which {
+      Mapper[Widget].coll.findOne(widget.name).map(WidgetMapper.asObject(_)) must beSome[Widget].which {
         loaded =>
           loaded.name must_== widget.name
         loaded.price must_== widget.price
@@ -252,10 +253,14 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
 
     "automatically assign (& retrieve objects by) MongoDB OID-s" in {
       val piggy = new Piggy("oy vey")
-      Some(Mapper[Piggy].upsert(piggy)) must beSome[Piggy].which {
+      val savedPiggy = {
+	Mapper[Piggy].coll.insert(PiggyMapper(piggy))
+	Some(piggy)
+      }
+      savedPiggy must beSome[Piggy].which {
         saved =>
           saved.id must notBeNull
-        Mapper[Piggy].findOne(saved.id) must beSome[Piggy].which {
+        Mapper[Piggy].coll.findOne(saved.id).map(PiggyMapper.asObject(_)) must beSome[Piggy].which {
           retrieved =>
             retrieved.id must_== saved.id
           retrieved.giggity must_== piggy.giggity
@@ -290,7 +295,10 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
       before.optional_piggy = Some(piggy)
       before.things = Set("foo", "bar", "baz", "quux", "foo", "baz")
 
-      val id = Mapper[Chair].upsert(before).id
+      val id = {
+	Mapper[Chair].coll.insert(ChairMapper.asDBObject(before))
+	before.id
+      }
 
       val dbo = Mapper[Chair].coll.findOne(id).get
       dbo("argh") = "ya"

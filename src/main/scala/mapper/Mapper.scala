@@ -212,7 +212,7 @@ class RichPropertyDescriptor(val idx: Int, val pd: PropertyDescriptor, val paren
   override def hashCode(): Int = pd.hashCode()
 }
 
-abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
+abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] with Logging with OJ {
   import Mapper._
   import MapperUtils._
 
@@ -389,6 +389,7 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
       tuples
   }
 
+  def apply(p: P) = asDBObject(p)
   def asDBObject(p: P): DBObject = {
     val result = {
       asKeyValueTuples(p)
@@ -518,17 +519,6 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Logging with OJ {
           p
         }
     }
-
-  def findOne(id: Any): Option[P] =
-    coll.findOne("_id" -> id) match {
-      case None => None
-      case Some(dbo) => Some(asObject(dbo))
-    }
-
-  def upsert(p: P): P = {
-    coll.insert(asDBObject(p))
-    p // XXX: errors? dragons?
-  }
 }
 
 trait DefaultArgsSetter[P <: AnyRef] {
