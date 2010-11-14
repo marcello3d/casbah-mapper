@@ -22,6 +22,45 @@ import com.bumnetworks.casbah.mapper.annotations._
 import org.apache.commons.lang.RandomStringUtils.{randomAscii => rs}
 import org.apache.commons.lang.math.RandomUtils.{nextInt => rn}
 
+object `package` {
+  implicit object ChairMapper extends Mapper[Chair] {
+    conn = MongoConnection()
+    db = "mapper_test"
+    coll = "chairs"
+  }
+
+  implicit object WidgetMapper extends Mapper[Widget] {
+    conn = MongoConnection()
+    db = "mapper_test"
+    coll = "widgets"
+  }
+
+  implicit object PiggyMapper extends Mapper[Piggy] {
+    conn = MongoConnection()
+    db = "mapper_test"
+    coll = "piggies"
+
+    "freshness".enum(Freshness)
+  }
+
+  implicit object WOOM_Mapper extends Mapper[WorldOutsideOfManhattan]
+  implicit object OAB_Mapper extends Mapper[OnABoat]
+
+  implicit object OneMapper extends Mapper[One]
+  implicit object TwoMapper extends Mapper[Two]
+
+  implicit object ListNodeMapper extends Mapper[ListNode]
+  implicit object MapNodeMapper extends Mapper[MapNode]
+
+  implicit object PersonMapper extends Mapper[Person] {
+    db = "mapper_test"
+    coll = "people"
+  }
+
+  implicit object AddressMapper extends Mapper[Address]
+  implicit object CityMapper extends Mapper[City]
+}
+
 @BeanInfo @UseTypeHints
 class Widget(@ID var name: String, @Key var price: Int) {
   def this() = this(null, 0)
@@ -97,29 +136,6 @@ case class OnABoat(@ID water: String) extends Badge {
   name = "I'm on a boat"
 }
 
-object ChairMapper extends Mapper[Chair] {
-  conn = MongoConnection()
-  db = "mapper_test"
-  coll = "chairs"
-}
-
-object WidgetMapper extends Mapper[Widget] {
-  conn = MongoConnection()
-  db = "mapper_test"
-  coll = "widgets"
-}
-
-object PiggyMapper extends Mapper[Piggy] {
-  conn = MongoConnection()
-  db = "mapper_test"
-  coll = "piggies"
-
-  "freshness".enum(Freshness)
-}
-
-object WOOM_Mapper extends Mapper[WorldOutsideOfManhattan]
-object OAB_Mapper extends Mapper[OnABoat]
-
 @BeanInfo
 case class One(@Key one: Option[String] = Some("one"))
 
@@ -128,8 +144,6 @@ case class Two(@Key two: String = "two") {
   @Key val three: Option[String] = None
 }
 
-object OneMapper extends Mapper[One]
-object TwoMapper extends Mapper[Two]
 
 @BeanInfo
 trait Node {
@@ -142,9 +156,6 @@ case class ListNode(@Key name: String, @Key @UseTypeHints children: List[Node] =
 
 @BeanInfo
 case class MapNode(@Key name: String, @Key @UseTypeHints children: Map[String, Node] = Map.empty[String, Node], @Key cheat: String = "map") extends Node
-
-object ListNodeMapper extends Mapper[ListNode]
-object MapNodeMapper extends Mapper[MapNode]
 
 object NodeMapper {
   def asDBObject(n: Node): DBObject =
@@ -169,28 +180,20 @@ object NodeCounter {
   new Index(name = "first", unique = true)
 ))
 case class Person(@ID(auto = true) id: ObjectId,
-		  @Key @Indexed(as = Array(new Index(name = "name"),
-					   new Index(name = "first"))) first_name: String,
-		  @Key @Index(name = "name") last_name: String,
-		  @Key home: Address)
+                  @Key @Indexed(as = Array(new Index(name = "name"),
+                                           new Index(name = "first"))) first_name: String,
+                  @Key @Index(name = "name") last_name: String,
+                  @Key home: Address)
 
 @BeanInfo
 case class Address(@Key street: String,
-		   @Key street_2: String,
-		   @Key city: City)
+                   @Key street_2: String,
+                   @Key city: City)
 
 @BeanInfo
 case class City(@Key zip: Int,
-		@Key city: String,
-		@Key state: String)
-
-object PersonMapper extends Mapper[Person] {
-  db = "mapper_test"
-  coll = "people"
-}
-
-object AddressMapper extends Mapper[Address]
-object CityMapper extends Mapper[City]
+                @Key city: String,
+                @Key state: String)
 
 class MapperSpec extends Specification with PendingUntilFixed with Logging {
   private implicit def pimpTimes(n: Int) = new {
@@ -201,6 +204,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
 
   doBeforeSpec {
     com.mongodb.casbah.commons.conversions.scala.RegisterConversionHelpers()
+
     ChairMapper
     WidgetMapper
     PiggyMapper
@@ -210,6 +214,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
     TwoMapper
     ListNodeMapper
     MapNodeMapper
+
     NodeCounter.n = 0
   }
 
@@ -217,7 +222,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
     shareVariables
 
     val widget = new Widget("something", 7824)
-    Mapper[Widget].coll.insert(WidgetMapper(widget))
+    Mapper[Widget].coll.insert(widget)
 
     "discover mapper for a class" in {
       Mapper[Piggy] must_== PiggyMapper
@@ -246,16 +251,16 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
 
     "preserve collection-level type hints" in {
       Mapper[Widget].coll.findOne(Map("_id" -> widget.name).asDBObject) must beSome[DBObject].which {
-	dbo =>
-	  dbo("_typeHint") must_== classOf[Widget].getName
+        dbo =>
+          dbo("_typeHint") must_== classOf[Widget].getName
       }
     }
 
     "automatically assign (& retrieve objects by) MongoDB OID-s" in {
       val piggy = new Piggy("oy vey")
       val savedPiggy = {
-	Mapper[Piggy].coll.insert(PiggyMapper(piggy))
-	Some(piggy)
+        Mapper[Piggy].coll.insert(piggy)
+        Some(piggy)
       }
       savedPiggy must beSome[Piggy].which {
         saved =>
@@ -296,8 +301,8 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
       before.things = Set("foo", "bar", "baz", "quux", "foo", "baz")
 
       val id = {
-	Mapper[Chair].coll.insert(ChairMapper.asDBObject(before))
-	before.id
+        Mapper[Chair].coll.insert(before)
+        before.id
       }
 
       val dbo = Mapper[Chair].coll.findOne(id).get
@@ -318,13 +323,13 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
             piggy.daysInYear must beSome[BigDecimal].which {
               b => b must_== DAYS_IN_YEAR
             }
-	    piggy.freshness must_== Freshness.Stale
+            piggy.freshness must_== Freshness.Stale
           }
         after.always_here must beSome[String]
         after.never_here must beNone
-	after.things.size must_== before.things.size
-	after.things must containAll(before.things)
-	//after.argh must_== "ya"
+        after.things.size must_== before.things.size
+        after.things must containAll(before.things)
+        //after.argh must_== "ya"
       }
     }
 
@@ -383,15 +388,15 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
     else {
       NodeCounter.n += 1
       if (rn(10) % 2 == 0) {
-	Some(ListNode(crap, (1 to many).toList.map(_ => node(level - 1)).filter(_.isDefined).map(_.get)))
+        Some(ListNode(crap, (1 to many).toList.map(_ => node(level - 1)).filter(_.isDefined).map(_.get)))
       } else {
-	Some(MapNode(crap, Map.empty[String, Node] ++ (1 to many).toList.map {
-	  _ =>
-	    node(level - 1) match {
-	      case Some(n) => Some(n.name -> n)
-	      case _ => None
-	    }
-	}.filter(_.isDefined).map(_.get)))
+        Some(MapNode(crap, Map.empty[String, Node] ++ (1 to many).toList.map {
+          _ =>
+            node(level - 1) match {
+              case Some(n) => Some(n.name -> n)
+              case _ => None
+            }
+        }.filter(_.isDefined).map(_.get)))
       }
     }
 
