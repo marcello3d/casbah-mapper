@@ -54,6 +54,11 @@ class MongoMappedCollection[P <: AnyRef : Manifest](val underlying: com.mongodb.
   def insert(ps: Array[P], wc: WriteConcern) = underlying.insert(ps.map(mapper.asDBObject(_)).toArray, wc)
   def insert(ps: List[P]) = underlying.insert(ps.map(mapper.asDBObject(_)).asJava)
 
+  def save(p: P, wc: Option[WriteConcern] = None) = wc match {
+    case Some(writeConcern) => underlying.save(mapper.asDBObject(p), writeConcern)
+    case _ => underlying.save(mapper.asDBObject(p))
+  }
+
   override def elements = find
   override def iterator = find
   def find() = new MongoMappedCursor[P](underlying.find, mapper)(manifest[P])
