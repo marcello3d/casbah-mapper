@@ -49,6 +49,11 @@ class MongoMappedCollection[P <: AnyRef : Manifest](val underlying: com.mongodb.
 
   implicit val p2dbo: (P) => DBObject = mapper.asDBObject _
 
+  def insert(ps: P*) = underlying.insert(ps.map(mapper.asDBObject(_)).toList.asJava)
+  def insert(p: P, wc: WriteConcern) = underlying.insert(mapper.asDBObject(p), wc)
+  def insert(ps: Array[P], wc: WriteConcern) = underlying.insert(ps.map(mapper.asDBObject(_)).toArray, wc)
+  def insert(ps: List[P]) = underlying.insert(ps.map(mapper.asDBObject(_)).asJava)
+
   override def elements = find
   override def iterator = find
   def find() = new MongoMappedCursor[P](underlying.find, mapper)(manifest[P])
