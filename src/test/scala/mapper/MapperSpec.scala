@@ -22,44 +22,42 @@ import com.bumnetworks.casbah.mapper.annotations._
 import org.apache.commons.lang.RandomStringUtils.{randomAscii => rs}
 import org.apache.commons.lang.math.RandomUtils.{nextInt => rn}
 
-object `package` {
-  implicit object ChairMapper extends Mapper[Chair] {
-    conn = MongoConnection()
-    db = "mapper_test"
-    coll = "chairs"
-  }
-
-  implicit object WidgetMapper extends Mapper[Widget] {
-    conn = MongoConnection()
-    db = "mapper_test"
-    coll = "widgets"
-  }
-
-  implicit object PiggyMapper extends Mapper[Piggy] {
-    conn = MongoConnection()
-    db = "mapper_test"
-    coll = "piggies"
-
-    "freshness".enum(Freshness)
-  }
-
-  implicit object WOOM_Mapper extends Mapper[WorldOutsideOfManhattan]
-  implicit object OAB_Mapper extends Mapper[OnABoat]
-
-  implicit object OneMapper extends Mapper[One]
-  implicit object TwoMapper extends Mapper[Two]
-
-  implicit object ListNodeMapper extends Mapper[ListNode]
-  implicit object MapNodeMapper extends Mapper[MapNode]
-
-  implicit object PersonMapper extends Mapper[Person] {
-    db = "mapper_test"
-    coll = "people"
-  }
-
-  implicit object AddressMapper extends Mapper[Address]
-  implicit object CityMapper extends Mapper[City]
+object ChairMapper extends Mapper[Chair] {
+  conn = Some(MongoConnection())
+  db = "mapper_test"
+  coll = "chairs"
 }
+
+object WidgetMapper extends Mapper[Widget] {
+  conn = Some(MongoConnection())
+  db = "mapper_test"
+  coll = "widgets"
+}
+
+object PiggyMapper extends Mapper[Piggy] {
+  conn = Some(MongoConnection())
+  db = "mapper_test"
+  coll = "piggies"
+
+  "freshness".enum(Freshness)
+}
+
+object WOOM_Mapper extends Mapper[WorldOutsideOfManhattan]
+object OAB_Mapper extends Mapper[OnABoat]
+
+object OneMapper extends Mapper[One]
+object TwoMapper extends Mapper[Two]
+
+object ListNodeMapper extends Mapper[ListNode]
+object MapNodeMapper extends Mapper[MapNode]
+
+object PersonMapper extends Mapper[Person] {
+  db = "mapper_test"
+  coll = "people"
+}
+
+object AddressMapper extends Mapper[Address]
+object CityMapper extends Mapper[City]
 
 @BeanInfo @UseTypeHints
 class Widget(@ID var name: String, @Key var price: Int) {
@@ -222,7 +220,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
     shareVariables
 
     val widget = new Widget("something", 7824)
-    Mapper[Widget].coll.insert(widget)
+    Mapper[Widget].coll.get.insert(widget)
 
     "discover mapper for a class" in {
       Mapper[Piggy] must_== PiggyMapper
@@ -242,7 +240,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
     }
 
     "retrieve an object" in {
-      Mapper[Widget].coll.findOne(widget.name).map(WidgetMapper.asObject(_)) must beSome[Widget].which {
+      Mapper[Widget].coll.get.findOne(widget.name) must beSome[Widget].which {
         loaded =>
           loaded.name must_== widget.name
         loaded.price must_== widget.price
@@ -250,7 +248,7 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
     }
 
     "preserve collection-level type hints" in {
-      Mapper[Widget].coll.findOne(Map("_id" -> widget.name).asDBObject) must beSome[DBObject].which {
+      Mapper[Widget].coll.get.underlying.asScala.findOne(Map("_id" -> widget.name).asDBObject) must beSome[DBObject].which {
         dbo =>
           dbo("_typeHint") must_== classOf[Widget].getName
       }
@@ -259,13 +257,13 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
     "automatically assign (& retrieve objects by) MongoDB OID-s" in {
       val piggy = new Piggy("oy vey")
       val savedPiggy = {
-        Mapper[Piggy].coll.insert(piggy)
+        Mapper[Piggy].coll.get.insert(piggy)
         Some(piggy)
       }
       savedPiggy must beSome[Piggy].which {
         saved =>
           saved.id must notBeNull
-        Mapper[Piggy].coll.findOne(saved.id).map(PiggyMapper.asObject(_)) must beSome[Piggy].which {
+        Mapper[Piggy].coll.get.findOne(saved.id) must beSome[Piggy].which {
           retrieved =>
             retrieved.id must_== saved.id
           retrieved.giggity must_== piggy.giggity
@@ -301,13 +299,11 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
       before.things = Set("foo", "bar", "baz", "quux", "foo", "baz")
 
       val id = {
-        Mapper[Chair].coll.insert(before)
+        Mapper[Chair].coll.get.insert(before)
         before.id
       }
 
-      val dbo = Mapper[Chair].coll.findOne(id).get
-      dbo("argh") = "ya"
-      Some(ChairMapper.asObject(dbo)) must beSome[Chair].which {
+      Mapper[Chair].coll.get.findOne(id) must beSome[Chair].which {
         after =>
           after.optional_piggy must beSome[Piggy].which {
             piggy =>
@@ -329,7 +325,6 @@ class MapperSpec extends Specification with PendingUntilFixed with Logging {
         after.never_here must beNone
         after.things.size must_== before.things.size
         after.things must containAll(before.things)
-        //after.argh must_== "ya"
       }
     }
 

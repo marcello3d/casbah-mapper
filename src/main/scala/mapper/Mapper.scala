@@ -49,8 +49,8 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] w
 
   //implicit def rpd2pd(prop: RichPropertyDescriptor): PropertyDescriptor = prop.pd
 
-  implicit protected def s2db(name: String): MongoDB = conn(name)
-  implicit protected def s2coll(name: String): MongoCollection = db(name)
+  implicit protected def s2db(name: String): Option[MongoDB] = conn.map(_(name))
+  implicit protected def s2coll(name: String): Option[MongoMappedCollection[P]] = db.map(_(name).mapped(manifest[P]))
 
   class PimpedString(p: String) {
     def enum(e: AnyRef) = propNamed(p) match {
@@ -61,9 +61,9 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] w
 
   implicit def pimpString(p: String) = new PimpedString(p)
 
-  var conn: MongoConnection = _
-  var db  : MongoDB         = _
-  var coll: MongoCollection = _
+  var conn: Option[MongoConnection]          = _
+  var db  : Option[MongoDB]                  = _
+  var coll: Option[MongoMappedCollection[P]] = _
 
   lazy val info = {
     try {
