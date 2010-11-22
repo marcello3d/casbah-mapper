@@ -9,3 +9,5 @@ java_pid*.hprof
 tags
 src/main/scala/scala/annotation/implicitNotFound.scala
 .ensime
+.DS_Store
+.idea/
