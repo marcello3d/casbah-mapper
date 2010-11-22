@@ -17,6 +17,7 @@ import java.math.{BigDecimal => JavaBigDecimal, RoundingMode, MathContext}
 import annotations.raw._
 import com.mongodb.casbah.commons.Logging
 import com.mongodb.casbah.Imports._
+import cello.introspector.ClassInfo
 
 object Mapper extends Logging {
   private val _m = new java.util.concurrent.ConcurrentHashMap[String, Mapper[_]]
@@ -65,27 +66,14 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] w
   var db  : Option[MongoDB]                  = None
   var coll: Option[MongoMappedCollection[P]] = None
 
-  lazy val info = {
-    try {
-      Introspector.getBeanInfo(obj_klass)
-    }
-    catch {
-      case t: Throwable => throw new InfoError(obj_klass, t)
-    }
-  }
+  lazy val info = ClassInfo(obj_klass)
 
   lazy val allProps = {
-    info.getPropertyDescriptors.filter {
-      prop => (annotated_?(prop, classOf[ID]) || annotated_?(prop, classOf[Key]))
-    }
-    .sortWith { case (a, b) => a.getName.compareTo(b.getName) < 0 }
+    info.properties.values.filter { prop => prop.annotated_?(classOf[ID]) || prop.annotated_?(classOf[Key]) }
+    .toSeq.sortWith { case (a, b) => a.name <= b.name }
     .zipWithIndex.map {
-      case (pd: PropertyDescriptor, idx: Int) => {
-        val pri = annotation[Key](pd, classOf[Key]) match {
-          case Some(a) => a.pri
-          case _ => -1
-        }
-        new RichPropertyDescriptor(if (pri == -1) idx else pri, pd, obj_klass)
+      case (prop, index: Int) => {
+        new RichPropertyDescriptor[P](prop.annotation(classOf[Key]).map(_.pri).getOrElse(index), prop, obj_klass)
       }
     }
     .sortWith { case (a, b) => a.idx <= b.idx }.toSet
@@ -123,7 +111,7 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] w
       case _ => None
     }
 
-  private def embeddedPropValue(p: P, prop: RichPropertyDescriptor, embedded: AnyRef) = {
+  private def embeddedPropValue(p: P, prop: RichPropertyDescriptor[P], embedded: AnyRef) = {
     log.trace("EMB: %s -> %s -> %s", p, prop, embedded)
 
     val dbo = {
@@ -152,7 +140,7 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] w
     case _ => None
   }
 
-  def propValue(p: P, prop: RichPropertyDescriptor): Option[Any] = {
+  def propValue(p: P, prop: RichPropertyDescriptor[P]): Option[Any] = {
     log.trace("V: %s , %s with %s", p, prop, prop.read)
     (prop.read.invoke(p) match {
       case null => {
@@ -231,16 +219,16 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] w
     result
   }
 
-  private def writeNested(p: P, prop: RichPropertyDescriptor, nested: MongoDBObject) = {
+  private def writeNested(p: P, prop: RichPropertyDescriptor[P], nested: MongoDBObject) = {
     val e = prop.writeMapper(nested).asObject(nested)
     log.trace("write nested '%s' to '%s'.'%s' using: %s -OR- %s", nested, p, prop.key, prop.write, prop.field)
     prop.write(p, if (prop.option_?) Some(e) else e)
   }
 
-  private def writeSeq(p: P, prop: RichPropertyDescriptor, src: MongoDBObject): Unit =
+  private def writeSeq(p: P, prop: RichPropertyDescriptor[P], src: MongoDBObject): Unit =
     writeSeq(p, prop, src.map { case (k, v) => v }.toList)
 
-  private def writeSeq(p: P, prop: RichPropertyDescriptor, src: Seq[_]): Unit = {
+  private def writeSeq(p: P, prop: RichPropertyDescriptor[P], src: Seq[_]): Unit = {
     def init: Iterable[Any] =
       if (prop.list_?) Nil
       else if (prop.buffer_?) ArrayBuffer()
@@ -261,7 +249,7 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] w
     prop.write(p, dst)
   }
 
-  private def writeMap(p: P, prop: RichPropertyDescriptor, src: MongoDBObject) = {
+  private def writeMap(p: P, prop: RichPropertyDescriptor[P], src: MongoDBObject) = {
     def init: scala.collection.Map[String, Any] =
       if (prop.outerType.isAssignableFrom(classOf[IMap[_,_]]))
         IMap.empty[String, Any]
@@ -285,7 +273,7 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] w
     prop.write(p, dst)
   }
 
-  def write(p: P, prop: RichPropertyDescriptor, v: Any): Unit =
+  def write(p: P, prop: RichPropertyDescriptor[P], v: Any): Unit =
     v match {
       case Some(l: MongoDBObject) if prop.iterable_? || prop.set_? => writeSeq(p, prop, l)
       case Some(l: DBObject) if prop.iterable_? || prop.set_? => writeSeq(p, prop, l)

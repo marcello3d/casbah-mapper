@@ -6,17 +6,19 @@ import com.mongodb.casbah.commons.Logging
 import com.mongodb.casbah.Imports._
 import java.beans.{Introspector, PropertyDescriptor}
 import scala.collection.mutable.Buffer
+import cello.introspector.ClassInfo
 
-class RichPropertyDescriptor(val idx: Int, val pd: PropertyDescriptor, val parent: Class[_]) extends Logging {
+class RichPropertyDescriptor[T](val idx: Int, val pd: ClassInfo[T]#Property, val parent: Class[T]) extends Logging {
   import MapperUtils._
 
   override def toString = "Prop/%s(%s @ %d (%s <- %s))".format(parent.getSimpleName, name, idx, innerType, outerType)
 
-  lazy val name = pd.getName
+  lazy val name = pd.name
   lazy val key = {
-    (if (annotated_?(pd, classOf[ID])) "_id"
+    (if (pd.annotated_?(classOf[ID]))
+      "_id"
      else {
-       annotation(pd, classOf[Key]) match {
+       pd.annotation(classOf[Key]) match {
          case None => name
          case Some(ann) => ann.value match {
            case "" => name
@@ -48,13 +50,13 @@ class RichPropertyDescriptor(val idx: Int, val pd: PropertyDescriptor, val paren
     pid0(innerType)
   }
 
-  lazy val read = pd.getReadMethod
-  lazy val write = if (pd.getWriteMethod == null) None else Some(pd.getWriteMethod)
+  lazy val read = pd.getter
+  lazy val write = pd.setter
 
   lazy val field = try {
-    val f = parent.getDeclaredField(name)
-    f.setAccessible(true)
-    Some(f)
+    val f = pd.field
+    f.map(_.setAccessible(true))
+    f
   }
   catch {
     case _ => None
@@ -96,20 +98,15 @@ class RichPropertyDescriptor(val idx: Int, val pd: PropertyDescriptor, val paren
     }
   }.asInstanceOf[Class[Any]]
 
-  lazy val outerType = pd.getPropertyType.asInstanceOf[Class[Any]]
+  lazy val outerType = pd.propertyType.asInstanceOf[Class[Any]]
 
   lazy val option_? = outerType == classOf[Option[_]]
-  lazy val id_? = annotated_?(pd, classOf[ID])
-  lazy val autoId_? = id_? && annotation(pd, classOf[ID]).get.auto
-  lazy val embedded_? = annotated_?(pd, classOf[Key]) && (annotated_?(pd, classOf[UseTypeHints]) || Mapper(innerType.getName).isDefined)
-  lazy val ignoreOut_? = annotation[Ignore](pd, classOf[Ignore]) match {
-    case Some(ann) => ann.out
-    case _ => false
-  }
-  lazy val ignoreIn_? = annotation[Ignore](pd, classOf[Ignore]) match {
-    case Some(ann) => ann.in
-    case _ => false
-  }
+  lazy val id_? = pd.annotated_?(classOf[ID])
+  lazy val autoId_? = id_? && pd.annotation(classOf[ID]).get.auto
+  lazy val embedded_? = pd.annotated_?(classOf[Key]) &&
+                        (pd.annotated_?(classOf[UseTypeHints]) || Mapper(innerType.getName).isDefined)
+  lazy val ignoreOut_? = pd.annotation(classOf[Ignore]).map(_.out).getOrElse(false)
+  lazy val ignoreIn_? = pd.annotation(classOf[Ignore]).map(_.in).getOrElse(false)
 
   lazy val iterable_? = !map_? && (list_? || buffer_?)
   lazy val list_? = outerType.isAssignableFrom(classOf[List[_]])
@@ -117,15 +114,9 @@ class RichPropertyDescriptor(val idx: Int, val pd: PropertyDescriptor, val paren
   lazy val map_? = outerType.isAssignableFrom(classOf[Map[_,_]])
   lazy val set_? = outerType.isAssignableFrom(classOf[Set[_]])
 
-  lazy val useTypeHints_? = annotation[UseTypeHints](pd, classOf[UseTypeHints]) match {
-    case Some(ann) if ann.value => true
-    case _ => false
-  }
+  lazy val useTypeHints_? = pd.annotation(classOf[UseTypeHints]).map(_.value).getOrElse(false)
 
-  lazy val mapKeyStrategy = annotation[KeyStrategy](pd, classOf[KeyStrategy]) match {
-    case Some(ann) => Some(ann.value.newInstance.asInstanceOf[MapKeyStrategy])
-    case _ => None
-  }
+  lazy val mapKeyStrategy = pd.annotation(classOf[KeyStrategy]).map(ann => ann.value.newInstance.asInstanceOf[MapKeyStrategy])
 
   def mapKey(k: Any): String = {
     k match {
@@ -176,7 +167,7 @@ class RichPropertyDescriptor(val idx: Int, val pd: PropertyDescriptor, val paren
   def serializeEnum(p: AnyRef) = read.invoke(p).toString
 
   override def equals(o: Any): Boolean = o match {
-    case other: RichPropertyDescriptor => pd.equals(other.pd)
+    case other: RichPropertyDescriptor[T] => pd == other.pd
     case _ => false
   }
 
