@@ -23,6 +23,6 @@ trait Mapped {
 
   def insert: WriteResult = coll.insert(this)
   def insert(wc: WriteConcern): WriteResult = coll.insert(this, wc)
-  def save = coll.save(this)
-  def save(wc: WriteConcern) = coll.save(this, wc)
+  def save: WriteResult = coll.save(this, None)
+  def save(wc: WriteConcern): WriteResult = coll.save(this, wc)
 }
