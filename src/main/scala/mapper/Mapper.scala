@@ -61,9 +61,9 @@ abstract class Mapper[P <: AnyRef : Manifest]() extends Function1[P, DBObject] w
 
   implicit def pimpString(p: String) = new PimpedString(p)
 
-  var conn: Option[MongoConnection]          = _
-  var db  : Option[MongoDB]                  = _
-  var coll: Option[MongoMappedCollection[P]] = _
+  var conn: Option[MongoConnection]          = None
+  var db  : Option[MongoDB]                  = None
+  var coll: Option[MongoMappedCollection[P]] = None
 
   lazy val info = {
     try {
