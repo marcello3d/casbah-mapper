@@ -35,39 +35,37 @@ class ScalaHalfBean {
 object ClassInfoSpec extends Specification {
   shareVariables
 
-  def haveProperty(classInfo:ClassInfo[_], name:String) = "have property "+name in {
-    classInfo.properties must have the key(name)
-  }
-  def notHaveProperty(classInfo:ClassInfo[_], name:String) = "not have property "+name in {
-    classInfo.properties must not have the key(name)
-  }
-  def propertyIsReadOnly(classInfo:ClassInfo[_], name:String) = {
-    "property "+name+" is readonly" in {
-      classInfo.properties(name).setter must beNone
+  def notHaveProperty(classInfo:ClassInfo[_], name:String) =
+    "not have property "+name in {
+      classInfo.properties must not have the key(name)
     }
-  }
-  def propertyIsNotReadOnly(classInfo:ClassInfo[_], name:String) = {
-    "property "+name+" has setter" in {
-      classInfo.properties(name).setter must beSomething
+  def haveReadOnlyProperty(classInfo:ClassInfo[_], name:String) =
+    "have readonly property "+name in {
+      (classInfo.properties must have the key(name)) &&
+      (classInfo.properties(name).setter must beNone)
     }
-  }
+  def haveSettableProperty(classInfo:ClassInfo[_], name:String) =
+    "have settable property "+name in {
+      (classInfo.properties must have the key(name)) &&
+      (classInfo.properties(name).setter must beSomething)
+    }
 
-  def propertyHasAnnotation(classInfo:ClassInfo[_], name:String, annotation:Class[_ <: Annotation]) = {
-    "property "+name+" has annotation "+annotation in {
+  def propertyHasAnnotation(classInfo:ClassInfo[_], name:String, annotation:Class[_ <: Annotation]) =
+    "have property "+name+" with annotation @"+annotation.getSimpleName in {
       classInfo.properties(name).annotated_?(annotation) must beTrue
     }
-  }
-  def propertyDoesNotHaveAnnotation(classInfo:ClassInfo[_], name:String, annotation:Class[_ <: Annotation]) = {
-    "property "+name+" doesn't have annotation "+annotation in {
+  def propertyDoesNotHaveAnnotation(classInfo:ClassInfo[_], name:String, annotation:Class[_ <: Annotation]) =
+    "have property "+name+" without annotation @"+annotation.getSimpleName in {
       classInfo.properties(name).annotated_?(annotation) must beFalse
     }
-  }
-  def haveMethod(classInfo:ClassInfo[_], name:String) = "have method "+name in {
-    classInfo.methods must have the key(name)
-  }
-  def notHaveMethod(classInfo:ClassInfo[_], name:String) = "not have method "+name in {
-    classInfo.methods must not have the key(name)
-  }
+  def haveMethod(classInfo:ClassInfo[_], name:String) =
+    "have method "+name in {
+      classInfo.methods.toMap must have the key(name)
+    }
+  def notHaveMethod(classInfo:ClassInfo[_], name:String) =
+    "not have method "+name in {
+      classInfo.methods.toMap must not have the key(name)
+    }
 
   // Without Bean info
   val sbClassInfo = ClassInfo(classOf[ScalaBean], false)
@@ -90,14 +88,10 @@ object ClassInfoSpec extends Specification {
 
     notHaveMethod(info, "getReadOnly")
 
-    haveProperty(info, "foo")
-    haveProperty(info, "four")
-    haveProperty(info, "maybeFive")
-    haveProperty(info, "readOnly")
-    propertyIsNotReadOnly(info, "foo")
-    propertyIsNotReadOnly(info, "four")
-    propertyIsNotReadOnly(info, "maybeFive")
-    propertyIsReadOnly(info, "readOnly")
+    haveSettableProperty(info, "foo")
+    haveSettableProperty(info, "four")
+    haveSettableProperty(info, "maybeFive")
+    haveReadOnlyProperty(info, "readOnly")
 
     propertyHasAnnotation(info, "foo", classOf[TestAnnotation])
     propertyHasAnnotation(info, "four", classOf[TestAnnotation])
@@ -131,23 +125,19 @@ object ClassInfoSpec extends Specification {
 
     notHaveMethod(info, "getReadOnly")
 
-    haveProperty(info, "foo")
-    haveProperty(info, "four")
-    haveProperty(info, "maybeFive")
-    haveProperty(info, "readOnly")
-    propertyIsNotReadOnly(info, "foo")
-    propertyIsNotReadOnly(info, "four")
-    propertyIsNotReadOnly(info, "maybeFive")
-    propertyIsReadOnly(info, "readOnly")
+    haveSettableProperty(info, "foo")
+    haveSettableProperty(info, "four")
+    haveSettableProperty(info, "maybeFive")
+    haveReadOnlyProperty(info, "readOnly")
     propertyHasAnnotation(info, "foo", classOf[TestAnnotation])
     propertyHasAnnotation(info, "four", classOf[TestAnnotation])
     propertyHasAnnotation(info, "maybeFive", classOf[TestAnnotation])
     propertyDoesNotHaveAnnotation(info, "readOnly", classOf[TestAnnotation])
 
-    haveProperty(info, "getFoo")
-    haveProperty(info, "getFour")
-    haveProperty(info, "getMaybeFive")
-    haveProperty(info, "isReadOnly")
+    haveReadOnlyProperty(info, "getFoo")
+    haveReadOnlyProperty(info, "getFour")
+    haveReadOnlyProperty(info, "getMaybeFive")
+    haveReadOnlyProperty(info, "isReadOnly")
 
     notHaveProperty(info, "getReadOnly")
   }
@@ -172,21 +162,17 @@ object ClassInfoSpec extends Specification {
 
     notHaveMethod(info, "getReadOnly")
 
-    haveProperty(info, "foo")
-    haveProperty(info, "four")
-    haveProperty(info, "maybeFive")
-    haveProperty(info, "readOnly")
-    propertyIsNotReadOnly(info, "foo")
-    propertyIsNotReadOnly(info, "four")
-    propertyIsNotReadOnly(info, "maybeFive")
-    propertyIsReadOnly(info, "readOnly")
+    haveSettableProperty(info, "foo")
+    haveSettableProperty(info, "four")
+    haveSettableProperty(info, "maybeFive")
+    haveReadOnlyProperty(info, "readOnly")
     propertyHasAnnotation(info, "foo", classOf[TestAnnotation])
     propertyHasAnnotation(info, "four", classOf[TestAnnotation])
     propertyHasAnnotation(info, "maybeFive", classOf[TestAnnotation])
     propertyDoesNotHaveAnnotation(info, "readOnly", classOf[TestAnnotation])
 
-    haveProperty(info, "getFoo")
-    haveProperty(info, "getFour")
+    haveReadOnlyProperty(info, "getFoo")
+    haveReadOnlyProperty(info, "getFour")
     notHaveProperty(info, "getMaybeFive")
     notHaveProperty(info, "isReadOnly")
 
@@ -208,7 +194,7 @@ object ClassInfoSpec extends Specification {
 
     haveMethod(info, "getFoo")
     haveMethod(info, "getFour")
-    haveMethod(info, "getMaybeFive")
+     haveMethod(info, "getMaybeFive")
     haveMethod(info, "isReadOnly")
 
     notHaveMethod(info, "getReadOnly")
@@ -218,10 +204,10 @@ object ClassInfoSpec extends Specification {
     notHaveProperty(info, "maybeFive")
     notHaveProperty(info, "readOnly")
 
-    haveProperty(info, "getFoo")
-    haveProperty(info, "getFour")
-    haveProperty(info, "getMaybeFive")
-    haveProperty(info, "isReadOnly")
+    haveReadOnlyProperty(info, "getFoo")
+    haveReadOnlyProperty(info, "getFour")
+    haveReadOnlyProperty(info, "getMaybeFive")
+    haveReadOnlyProperty(info, "isReadOnly")
 
     notHaveProperty(info, "getReadOnly")
   }
@@ -232,14 +218,11 @@ object ClassInfoSpec extends Specification {
        ClassInfo(classOf[ScalaHalfBean], true),
        ClassInfo(classOf[JavaBean], true)).map {
     info => info.toString should {
-      haveProperty(info, "foo")
-      haveProperty(info, "four")
-      haveProperty(info, "maybeFive")
-      haveProperty(info, "readOnly")
-      propertyIsNotReadOnly(info, "foo")
-      propertyIsNotReadOnly(info, "four")
-      propertyIsNotReadOnly(info, "maybeFive")
-      propertyIsReadOnly(info, "readOnly")
+      haveSettableProperty(info, "foo")
+      haveSettableProperty(info, "four")
+      haveSettableProperty(info, "maybeFive")
+      haveReadOnlyProperty(info, "readOnly")
+      
       propertyHasAnnotation(info, "foo", classOf[TestAnnotation])
       propertyHasAnnotation(info, "four", classOf[TestAnnotation])
       propertyHasAnnotation(info, "maybeFive", classOf[TestAnnotation])

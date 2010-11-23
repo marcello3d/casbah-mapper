@@ -6,77 +6,61 @@
 package cello.introspector
 
 import reflect.NameTransformer
-import java.util.regex.Pattern
 import java.lang.reflect.{Field, Method}
 import java.lang.annotation.Annotation
 import java.util.Locale.ENGLISH
 
 object ClassInfo {
   def apply[T](clazz:Class[T], beanSupport:Boolean = true) = new ClassInfo(clazz, beanSupport)
-  private val NAME_PATTERN = Pattern.compile("^\\w+$")
-  private val BEAN_GETTER_PATTERN = Pattern.compile("^(?:get|is)([A-Z])(\\w*)$")
 }
-
-class ClassInfo[T] private[ClassInfo] (val scalaClass:Class[T], beanSupport:Boolean) {
-  lazy val methods = Map(scalaClass.getMethods.map{m => NameTransformer.decode(m.getName) -> m}: _*)
+class ClassInfo[T](val scalaClass:Class[T], val beanSupport:Boolean) {
+  lazy val methods = scalaClass.getMethods.map{ m => NameTransformer.decode(m.getName) -> m }
   lazy val fields = {
-    def allFields(clazz:Class[_]):List[Field] = {
-      if (clazz == null) Nil else clazz.getDeclaredFields.toList ++ allFields(clazz.getSuperclass)
-    }
-    Map(allFields(scalaClass).map{f => f.getName -> f}: _*)
+    def fields(c:Class[_]):List[Field] = if (c == null) Nil else c.getDeclaredFields.toList ++ fields(c.getSuperclass)
+    fields(scalaClass).map{f => f.getName -> f}.toMap
   }
   lazy val properties = {
-    val getters = methods.filter{ case (name, getter) => getter.getParameterTypes.isEmpty &&
-                                                         getter.getReturnType != Void.TYPE &&
-                                                         ClassInfo.NAME_PATTERN.matcher(name).matches}
+    val Getter = """^\w+$""".r
+    val BeanGetter = """^(?:get|is)([A-Z])(\w*)$""".r
+    val getters = methods.filter{ case (name,getter) => getter.getParameterTypes.length == 0 &&
+                                                        getter.getReturnType != Void.TYPE &&
+                                                        (Getter findFirstIn name).isDefined }.toMap
     if (beanSupport) {
-      def beanName(name:String) = {
-        val matcher = ClassInfo.BEAN_GETTER_PATTERN.matcher(name)
-        if (matcher.matches) Some(matcher.group(1).toLowerCase(ENGLISH) + matcher.group(2)) else None
-      }
-      // filter out properties that appear as bean-style getters and scala getters
-      getters.filter{ case (name,getter) => beanName(name).isEmpty }
-                .map{ case (name,getter) => name -> new ScalaProperty(name,getter) } ++
-      // add bean properties that don't appear as scala getters
-      getters.filter{ case (name,getter) => beanName(name).map(!getters.contains(_)).getOrElse(false) }
-                .map{ case (name,getter) => beanName(name).map(name => name -> new JavaBeanProperty(name,getter)).get }
+      def beanify(name:String) = BeanGetter findFirstMatchIn name map{m => m.group(1).toLowerCase(ENGLISH) + m.group(2)}
+      // convert non-bean getters to scala properties
+      getters.filter{ case (name,getter) => beanify(name).isEmpty }
+                .map{ case (name,getter) => name -> new Property(name,getter,name+"_=") } ++
+      // add bean getter properties that aren't already scala getters
+      getters.filter{ case (name,getter) => beanify(name).map(!getters.contains(_)).getOrElse(false) }
+                .map{ case (name,getter) => beanify(name).map{prop => prop -> new Property(prop,getter,
+                                                                       BeanGetter replaceFirstIn(name,"set$1$2"))}.get }
     } else {
-      getters.map{ case (name,getter) => name -> new ScalaProperty(name,getter) }
+      getters.map{ case (name,getter) => name -> new Property(name,getter,name+"_=") }
     }
   }
-
   override def toString = "ClassInfo[%s%s]".format(scalaClass,if (beanSupport) " with bean support" else "")
-  override def equals(o: Any) = o match {
-    case other:ClassInfo[T] => scalaClass == other.scalaClass
+  override def equals(o:Any) = o match {
+    case other:ClassInfo[T] => scalaClass == other.scalaClass && beanSupport == other.beanSupport
     case _ => false
   }
-  override def hashCode = scalaClass.hashCode
+  override def hashCode = scalaClass.hashCode ^ beanSupport.hashCode
 
-  class ScalaProperty(name:String, getter:Method) extends Property(name,getter) {
-    protected override def setterName = name+"_="
-  }
-  class JavaBeanProperty(name:String, getter:Method) extends Property(name,getter) {
-    private def isBoolean = propertyType == java.lang.Boolean.TYPE || propertyType == classOf[Boolean]
-    protected override def setterName = "set" + name(0).toUpper + name.substring(1)
-  }
-  abstract class Property(val name:String, val getter:Method) {
-    lazy val propertyType:Class[_] = getter.getReturnType
-    protected def setterName:String
-    lazy val setter:Option[Method] = methods.get(setterName).filter(_.getParameterTypes.toList == List(propertyType))
-    lazy val field:Option[Field] = fields.get(name)
-    lazy val annotations:Set[Annotation] = getter.getAnnotations.toSet ++
-                                           setter.map(_.getAnnotations).getOrElse(Array()) ++
-                                           field.map(_.getAnnotations).getOrElse(Array())
+  class Property(val name:String, val getter:Method, setterName:String) {
+    lazy val propertyType = getter.getReturnType
+    lazy val field = fields.get(name)
+    lazy val setter = methods.find{ case (name,m) => name == setterName &&
+                                                     m.getParameterTypes.toList == List(propertyType) }.map(_._2)
+    lazy val annotations = getter.getAnnotations.toSet ++
+                           setter.map(_.getAnnotations).getOrElse(Array()) ++
+                           field.map(_.getAnnotations).getOrElse(Array())
 
-    def annotation[A <: Annotation](ac:Class[A]) = annotations.find(a => ac.isAssignableFrom(a.getClass))
-                                                              .asInstanceOf[Option[A]]
+    def annotation[A <: Annotation](ac:Class[A]) = annotations.find(a => ac.isAssignableFrom(a.getClass)).asInstanceOf[Option[A]]
     def annotated_?(ac:Class[_ <: Annotation]) = annotation(ac).isDefined
-
     def get(target:T):AnyRef = getter.invoke(target)
     def set(target:T, value:AnyRef):Unit = setter.get.invoke(target,value)
 
-    override def toString = "%s[%s.%s]".format(getClass.getSimpleName,scalaClass,name)
-    override def equals(o: Any) = o match {
+    override def toString = "Property[%s.%s]".format(scalaClass.getName,name)
+    override def equals(o:Any) = o match {
       case other:Property => getter == other.getter
       case _ => false
     }
