@@ -2,7 +2,6 @@ package com.bumnetworks.casbah.mapper
 
 import com.mongodb.{DBCollection, DBCursor, WriteConcern, WriteResult}
 import com.mongodb.casbah.Imports._
-import com.mongodb.casbah.Implicits._
 import com.mongodb.casbah.{MongoConnection, MongoCursor, MongoCollectionWrapper}
 
 import scala.reflect.Manifest
