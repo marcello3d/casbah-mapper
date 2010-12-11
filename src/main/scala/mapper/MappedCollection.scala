@@ -64,18 +64,18 @@ class MongoMappedCollection[P <: AnyRef : Manifest](val underlying: com.mongodb.
   def find(ref: DBObject) = new MongoMappedCursor[P](underlying.find(ref), mapper)(manifest[P])
   def find(ref: DBObject, keys: DBObject) = new MongoMappedCursor[P](underlying.find(ref, keys), mapper)(manifest[P])
   def find(ref: DBObject, fields: DBObject, numToSkip: Int, batchSize: Int) = new MongoMappedCursor[P](underlying.find(ref, fields, numToSkip, batchSize), mapper)(manifest[P])
-  def findOne() = optWrap(underlying.findOne()).map(mapper.asObject(_))
-  def findOne(o: DBObject) = optWrap(underlying.findOne(o)).map(mapper.asObject(_))
-  def findOne(o: DBObject, fields: DBObject) = optWrap(underlying.findOne(o, fields)).map(mapper.asObject(_))
-  def findOne(obj: Object) = optWrap(underlying.findOne(obj)).map(mapper.asObject(_))
-  def findOne(obj: Object, fields: DBObject) = optWrap(underlying.findOne(obj, fields)).map(mapper.asObject(_))
-  def findAndModify[A <% DBObject : Manifest, B <% DBObject : Manifest](query: A, update: B) = optWrap(underlying.findAndModify(query, update)).asInstanceOf[P]
-  def findAndModify[A <% DBObject : Manifest, B <% DBObject : Manifest, C <% DBObject : Manifest](query: A, sort: B, update: C) = optWrap(underlying.findAndModify(query, sort, update)).asInstanceOf[P]
+  def findOne() = Option(underlying.findOne()).map(mapper.asObject(_))
+  def findOne(o: DBObject) = Option(underlying.findOne(o)).map(mapper.asObject(_))
+  def findOne(o: DBObject, fields: DBObject) = Option(underlying.findOne(o, fields)).map(mapper.asObject(_))
+  def findOne(obj: Object) = Option(underlying.findOne(obj)).map(mapper.asObject(_))
+  def findOne(obj: Object, fields: DBObject) = Option(underlying.findOne(obj, fields)).map(mapper.asObject(_))
+  def findAndModify[A <% DBObject : Manifest, B <% DBObject : Manifest](query: A, update: B) = Option(underlying.findAndModify(query, update)).asInstanceOf[P]
+  def findAndModify[A <% DBObject : Manifest, B <% DBObject : Manifest, C <% DBObject : Manifest](query: A, sort: B, update: C) = Option(underlying.findAndModify(query, sort, update)).asInstanceOf[P]
   def findAndModify[A <% DBObject : Manifest, B <% DBObject : Manifest, C <% DBObject : Manifest, D <% DBObject : Manifest](
     query: A, fields: B, sort: C, remove: Boolean, update: D, returnNew: Boolean, upsert: Boolean
-  ) = optWrap(underlying.findAndModify(query, fields, sort, remove, update, returnNew, upsert)).asInstanceOf[P]
+  ) = Option(underlying.findAndModify(query, fields, sort, remove, update, returnNew, upsert)).asInstanceOf[P]
 
-  def findAndRemove[A <% DBObject : Manifest](query: A) = optWrap(underlying.findAndRemove(query)).asInstanceOf[P]
+  def findAndRemove[A <% DBObject : Manifest](query: A) = Option(underlying.findAndRemove(query)).asInstanceOf[P]
 
   override def head = findOne.get
   override def headOption = findOne
