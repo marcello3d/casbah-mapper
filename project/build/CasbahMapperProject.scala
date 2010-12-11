@@ -4,7 +4,7 @@ class CasbahMapperProject(info: ProjectInfo) extends DefaultProject(info) {
   override def managedStyle = ManagedStyle.Maven
   super.compileOptions ++ Seq(Unchecked, ExplainTypes, Deprecation)
 
-  val casbah_core = "com.mongodb.casbah" %% "core" % "2.0b2"
+  val casbah_core = "com.mongodb.casbah" %% "casbah-core" % "2.0b3"
   val objenesis = "org.objenesis" % "objenesis" % "1.2"
 
   val specsVersion = crossScalaVersionString match {
